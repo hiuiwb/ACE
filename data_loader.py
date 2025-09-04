@@ -27,8 +27,8 @@ def load_staff_log(filepath="staff_activity_log.csv"):
     print(f"Loading Staff Activity Log from {filepath}...")
     df = pd.read_csv(filepath)
     
-    # Use the robust ISO8601 parser to handle timestamp variations
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format='ISO8601')
+    # Robust parsing: let pandas infer ISO dates; invalid parse -> NaT
+    df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
     
     return df
 
@@ -44,11 +44,33 @@ def load_patient_log(filepath="patient_request_log.csv"):
         pandas.DataFrame: A DataFrame containing the patient request events.
     """
     print(f"Loading Patient Request Log from {filepath}...")
-    df = pd.read_csv(filepath)
-    
-    # Convert both timestamp columns
-    df['request_timestamp'] = pd.to_datetime(df['request_timestamp'], format='ISO8601')
-    # The process_timestamp can have missing values (NaT), which is handled correctly
-    df['process_timestamp'] = pd.to_datetime(df['process_timestamp'], format='ISO8601', errors='coerce')
+    # Read timestamps as raw strings to avoid pandas silently converting unusual tokens to NaN
+    df = pd.read_csv(filepath, dtype=str)
+
+    # Restore numeric flag columns to integers if present
+    for col in ('lab_result', 'clinical_note', 'billing_info'):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+
+    # Normalize and parse timestamp columns robustly
+    for ts_col in ('request_timestamp', 'process_timestamp'):
+        if ts_col in df.columns:
+            # Ensure string, strip whitespace and surrounding quotes
+            df[ts_col] = df[ts_col].astype(str).str.strip()
+            df[ts_col] = df[ts_col].str.strip('"').str.strip("'")
+            # Convert obvious null-like strings to real NaN so to_datetime will coerce
+            df[ts_col] = df[ts_col].replace({'nan': None, 'None': None, '': None})
+            # Try common ISO formats explicitly to handle microsecond and second-only cases reliably
+            series = df[ts_col]
+            parsed = pd.to_datetime(series, format='%Y-%m-%dT%H:%M:%S.%f', errors='coerce')
+            mask = parsed.isna()
+            if mask.any():
+                parsed2 = pd.to_datetime(series[mask], format='%Y-%m-%dT%H:%M:%S', errors='coerce')
+                parsed.loc[mask] = parsed2
+            # final fallback to pandas flexible parser
+            still_mask = parsed.isna()
+            if still_mask.any():
+                parsed.loc[still_mask] = pd.to_datetime(series[still_mask], errors='coerce')
+            df[ts_col] = parsed
 
     return df

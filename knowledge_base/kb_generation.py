@@ -4,9 +4,9 @@ import random
 from datetime import datetime, timedelta
 
 # --- 1. CONFIGURATION ---
-NUM_DOCTORS = 20
-NUM_PATIENTS = 200
-NUM_BILLING_STAFF = 5
+NUM_DOCTORS = 5
+NUM_PATIENTS = 20
+NUM_BILLING_STAFF = 2
 START_DATE = datetime(2025, 1, 1)
 
 # Define principals with more realistic IDs
@@ -48,13 +48,9 @@ def generate_core_facts():
         core_facts.append({"category": category_code, "fact_name": "owns_phi_record", "arg1": patient, "arg2": record, "arg3": None})
         core_facts.append({"category": category_code, "fact_name": "is_phi", "arg1": record, "arg2": None, "arg3": None})
         
-    # C. Resource Types and Role Permissions (for 'Minimum Necessary' rule)
-    resource_types = ['clinical_note', 'lab_result', 'billing_info']
-    for record in PHI_RECORDS.values():
-        rtype = random.choice(resource_types)
-        core_facts.append({"category": category_code, "fact_name": "resource_type", "arg1": record, "arg2": rtype, "arg3": None})
-    
-    # Define which roles can access which types
+    # C. Role Permissions (for 'Minimum Necessary' rule)
+    # Note: we no longer generate per-record 'resource_type' facts here.
+    # Permissions (which roles can access which attribute types) are still defined below.
     core_facts.append({"category": category_code, "fact_name": "role_can_access_type", "arg1": "doctor", "arg2": "clinical_note", "arg3": None})
     core_facts.append({"category": category_code, "fact_name": "role_can_access_type", "arg1": "doctor", "arg2": "lab_result", "arg3": None})
     core_facts.append({"category": category_code, "fact_name": "role_can_access_type", "arg1": "billing_clerk", "arg2": "billing_info", "arg3": None})
@@ -116,4 +112,3 @@ if __name__ == "__main__":
     print(f"\n--- Hospital Knowledge Base Generation Complete ---")
     print(f"Generated {len(kb_df)} facts across 2 categories and saved to 'knowledge_base.csv'.")
     print("KB now contains a complete consent profile for every patient across all purposes.")
-

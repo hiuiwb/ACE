@@ -9,15 +9,20 @@
 :- dynamic(read_phi/4).
 :- dynamic(request_access/4).
 :- dynamic(request_deactivation/3).
+:- dynamic(request_fulfilled/1).
+:- dynamic(deactivation_fulfilled/1).
 
 
 % --- HELPER PREDICATES ---
 
-% Calculates days between two YYYY-MM-DD date strings.
+% Calculates days between two date strings (ISO-like). Uses parse_time/2
+% to obtain epoch seconds, then computes whole days difference.
 days_since(StartDateString, EndDateString, Days) :-
-    parse_time(StartDateString, '%Y-%m-%d', StartStamp),
-    parse_time(EndDateString, '%Y-%m-%d', EndStamp),
-    Days is floor((EndStamp - StartStamp) / (24 * 3600)).
+    catch(parse_time(StartDateString, StartStamp), _, fail),
+    catch(parse_time(EndDateString, EndStamp), _, fail),
+    Seconds is EndStamp - StartStamp,
+    DaysFloat is Seconds / (24 * 3600),
+    Days is floor(DaysFloat).
 
 
 % --- COMPLIANCE VIOLATION RULES ---
@@ -36,11 +41,23 @@ violation('hipaa_auth', Doctor, PHI_Record) :-
 % --- Rule 2: Minimum Necessary Violation (HIPAA-style) ---
 % A violation occurs if a principal's role does not permit them to
 % access the specific type of data contained in the record.
+% violation('hipaa_min_necessary', Principal, PHI_Record) :-
+%    read_phi(Principal, PHI_Record, _Purpose, _EventID),
+%    has_role(Principal, Role),
+%    resource_type(PHI_Record, Type),
+%    \+ role_can_access_type(Role, Type).
+
+% Add dynamic declaration for attribute-level read facts
+:- dynamic(read_attribute/3).  % read_attribute(Principal, PHI_Record, AttributeAtom)
+
+% --- Rule 2: Minimum Necessary Violation (attribute-aware) ---
+% A violation occurs if a principal's role does not permit them to access any
+% specific attribute contained in the record that they actually read.
 violation('hipaa_min_necessary', Principal, PHI_Record) :-
     read_phi(Principal, PHI_Record, _Purpose, _EventID),
     has_role(Principal, Role),
-    resource_type(PHI_Record, Type),
-    \+ role_can_access_type(Role, Type).
+    read_attribute(Principal, PHI_Record, Attribute),
+    \+ role_can_access_type(Role, Attribute).
 
 % --- Rule 3: GDPR Art. 18 (Restriction of Processing) ---
 % A violation occurs if a patient's record is used for a 'Purpose'
@@ -53,8 +70,30 @@ violation('gdpr_art18_restriction', Principal, PHI_Record) :-
 % --- Rule 4: GDPR Art. 17 (Right to Erasure) ---
 % A violation occurs if a deactivation request from a patient is older
 % than 30 days and has not been marked as fulfilled.
-violation('gdpr_art17_erasure', Patient, RequestID) :-
+% violation('gdpr_art17_erasure', Patient, RequestID) :-
+%     request_deactivation(Patient, RequestID, RequestDate),
+%     current_date(Today),
+%     days_since(RequestDate, Today, Days),
+%     Days > 30,
+%     \+ deactivation_fulfilled(RequestID).
+
+% --- Rule 5: GDPR Art. 15 (Right of Access) ---
+% A violation occurs if a patient's valid access request is older than 30
+% days and has not been marked as 'fulfilled' in the Knowledge Base.
+% violation('gdpr_art15_access', Patient, RequestID) :-
+%     request_access(Patient, _PHI_Record, RequestID, RequestDate),
+%     current_date(Today),
+%     days_since(RequestDate, Today, Days),
+%     Days > 30,
+%     \+ request_fulfilled(RequestID).
+
+% --- Rule 4: GDPR Art. 17 (Right to Erasure) ---
+% A violation occurs if a deactivation request from a patient is older
+% than 30 days and has not been marked as fulfilled. We attribute the
+% violation to the patient's assigned doctor.
+violation('gdpr_art17_erasure', Doctor, RequestID) :-
     request_deactivation(Patient, RequestID, RequestDate),
+    is_doctor_of(Doctor, Patient),
     current_date(Today),
     days_since(RequestDate, Today, Days),
     Days > 30,
@@ -63,8 +102,10 @@ violation('gdpr_art17_erasure', Patient, RequestID) :-
 % --- Rule 5: GDPR Art. 15 (Right of Access) ---
 % A violation occurs if a patient's valid access request is older than 30
 % days and has not been marked as 'fulfilled' in the Knowledge Base.
-violation('gdpr_art15_access', Patient, RequestID) :-
+% The violation is attributed to the doctor's responsibility to process it.
+violation('gdpr_art15_access', Doctor, RequestID) :-
     request_access(Patient, _PHI_Record, RequestID, RequestDate),
+    is_doctor_of(Doctor, Patient),
     current_date(Today),
     days_since(RequestDate, Today, Days),
     Days > 30,

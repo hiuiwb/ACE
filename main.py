@@ -23,7 +23,7 @@ RULE_CRITICALITIES = {
 }
 
 # --- 2. Pre-processing function for patient request log ---
-def preprocess_log_to_generate_facts(patient_log_df):
+def preprocess_log_to_generate_facts(patient_log_df, audit_date_str):
     """
     Scans the patient request log to find TIMELY fulfilled requests and
     returns a DataFrame of corresponding facts. A request is only considered
@@ -32,17 +32,25 @@ def preprocess_log_to_generate_facts(patient_log_df):
     print("Pre-processing patient log to identify fulfilled requests...")
     fulfilled_facts = []
     
+    # Consider only fulfillments that occurred on-or-before the audit date
+    audit_date = pd.to_datetime(audit_date_str)
+
     # Create mappings from request_id to request details for efficient lookup
     requests_df = patient_log_df[patient_log_df['action'].isin(['request_access', 'request_deactivation'])].copy()
     requests_df.set_index('log_id', inplace=True)
-    
-    fulfillments_df = patient_log_df[patient_log_df['process_timestamp'].notna()]
-    
+
+    fulfillments_df = patient_log_df[patient_log_df['process_timestamp'].notna()].copy()
+    fulfillments_df = fulfillments_df[fulfillments_df['process_timestamp'] <= audit_date]
+
     for _, req in fulfillments_df.iterrows():
         request_id = req['log_id']
-        # Check if the fulfillment was timely
+        # Ensure request_timestamp exists
+        if pd.isna(req.get('request_timestamp')):
+            continue
+
+        # Check if the fulfillment was timely (processed within 30 days of request)
         time_delta = req['process_timestamp'] - req['request_timestamp']
-        
+
         if time_delta.days <= 30:
             action = req['action']
             if action == 'request_access':
@@ -56,6 +64,58 @@ def preprocess_log_to_generate_facts(patient_log_df):
     else:
         print("No timely fulfillment events found in patient log.")
         return pd.DataFrame()
+
+
+def print_violation_log_entries(violations, staff_log_df, patient_log_df):
+    """Print the original log entry corresponding to each detected violation.
+
+    The function searches staff and patient logs by `log_id` first, then by `resource` as a fallback.
+    """
+    if not violations:
+        return
+
+    print('\n--- VIOLATION LOG ENTRIES (matched to original logs) ---')
+    for v in violations:
+        obj = v.get('ObjectID')
+        rule = v.get('RuleID')
+        principal = v.get('Principal')
+        print(f"\nViolation {rule} | Principal: {principal} | ObjectID: {obj}")
+
+        found = False
+        # Search by log_id in staff log
+        if 'log_id' in staff_log_df.columns:
+            srows = staff_log_df[staff_log_df['log_id'] == obj]
+            if not srows.empty:
+                print('Staff log entry:')
+                print(srows.to_string(index=False))
+                found = True
+
+        # Search by log_id in patient log
+        if not found and 'log_id' in patient_log_df.columns:
+            prows = patient_log_df[patient_log_df['log_id'] == obj]
+            if not prows.empty:
+                print('Patient request log entry:')
+                print(prows.to_string(index=False))
+                found = True
+
+        # Fallback: search by resource field
+        if not found:
+            if 'resource' in staff_log_df.columns:
+                srows = staff_log_df[staff_log_df['resource'] == obj]
+                if not srows.empty:
+                    print('Staff log entry (matched by resource):')
+                    print(srows.to_string(index=False))
+                    found = True
+        if not found:
+            if 'resource' in patient_log_df.columns:
+                prows = patient_log_df[patient_log_df['resource'] == obj]
+                if not prows.empty:
+                    print('Patient request log entry (matched by resource):')
+                    print(prows.to_string(index=False))
+                    found = True
+
+        if not found:
+            print('  No matching log entry found in staff or patient logs.')
 
 # --- 3. Main orchestration script ---
 def main():
@@ -72,7 +132,7 @@ def main():
     print(patient_log_df['action'].value_counts().to_string())
 
     # --- Pre-processing Step ---
-    derived_facts_df = preprocess_log_to_generate_facts(patient_log_df)
+    derived_facts_df = preprocess_log_to_generate_facts(patient_log_df, AUDIT_DATE)
     if not derived_facts_df.empty:
         kb_df = pd.concat([kb_df, derived_facts_df], ignore_index=True)
 
@@ -84,6 +144,9 @@ def main():
     staff_violations = ace_auditor.run_audit(staff_log_df, AUDIT_DATE)
     patient_violations = ace_auditor.run_audit(patient_log_df, AUDIT_DATE)
     all_detected_violations = staff_violations + patient_violations
+
+    # Print original log entries for each detected violation to aid debugging
+    print_violation_log_entries(all_detected_violations, staff_log_df, patient_log_df)
 
     # --- Initialize the Scorer ---
     scorer = ComplianceScorer(SCORING_WEIGHTS, NORMALIZATION_CONSTANTS, RULE_CRITICALITIES)

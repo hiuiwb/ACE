@@ -9,12 +9,12 @@ VIOLATION_RATE = 0.5 # Target violation rate (e.g., 50% of requests will be fulf
 START_DATE = datetime(2025, 1, 1)
 END_DATE = datetime(2025, 8, 30)
 # Entities
-PATIENTS = [f'pat_{i}' for i in range(200)]
-PHI_RECORDS = {f'pat_{i}': f'phi_rec_{i}' for i in range(200)}
+PATIENTS = [f'pat_{i}' for i in range(20)]
+PHI_RECORDS = {f'pat_{i}': f'phi_rec_{i}' for i in range(20)}
 # Special Principals
-UNFULFILLED_ACCESS_PATIENT = "pat_35"
-FULFILLED_ACCESS_PATIENT = "pat_45"
-DEACTIVATED_PATIENT_REQUEST = "pat_15" # Patient who will request deactivation
+UNFULFILLED_ACCESS_PATIENT = "pat_15"
+FULFILLED_ACCESS_PATIENT = "pat_10"
+DEACTIVATED_PATIENT_REQUEST = "pat_5" # Patient who will request deactivation
 
 # The types of data a patient can request access to
 REQUESTABLE_ATTRIBUTES = ['lab_result', 'clinical_note', 'billing_info']
@@ -26,8 +26,9 @@ def create_request_entry(log_id, principal, action, resource, req_time, proc_tim
         "lab_result": 1 if 'lab_result' in accessed_types else 0,
         "clinical_note": 1 if 'clinical_note' in accessed_types else 0,
         "billing_info": 1 if 'billing_info' in accessed_types else 0,
-        "request_timestamp": req_time.isoformat(),
-        "process_timestamp": proc_time.isoformat() if proc_time else None,
+    # Use second-precision ISO-like format (no microseconds) to match parser expectations
+    "request_timestamp": req_time.strftime('%Y-%m-%dT%H:%M:%S'),
+    "process_timestamp": proc_time.strftime('%Y-%m-%dT%H:%M:%S') if proc_time else None,
         "label": label
     }
 
@@ -91,8 +92,9 @@ if __name__ == "__main__":
     # --- Finalize and Save ---
     log_df = pd.DataFrame(all_request_entries)
     log_df.sort_values(by="request_timestamp", inplace=True, ignore_index=True)
-    log_df.to_csv("patient_request_log.csv", index=False)
-    
+    # Save into the system_log directory where the loader expects the file
+    log_df.to_csv("system_log/patient_request_log.csv", index=False)
+
     print(f"\n--- Patient Request Log Generation Complete ---")
     print(f"Generated {len(log_df)} total request entries and saved to 'patient_request_log.csv'.")
 
