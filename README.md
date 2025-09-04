@@ -1,166 +1,149 @@
 # Automated Compliance Engine (ACE)
 
-This project is a simulation and audit engine for automated compliance checking against GDPR and HIPAA policies. It integrates Python and Prolog to detect violations, score compliance, and support scenario-driven verification for data protection regulations.
+This repository contains a reproducible test harness for automated compliance verification against GDPR and HIPAA-style policies. ACE couples a Prolog policy file with Python tooling to:
 
-## Features
-- **Knowledge Base Generation:** Scripts to generate testable facts for users, resources, requests, and consent.
-- **System Log Simulation:** Realistic event logs for user actions, access requests, and data processing.
-- **Policy Rules:** Prolog rules for GDPR (Articles 15, 17, 18) and HIPAA (minimum necessary, patient access).
-- **Automated Audit:** Python engine loads KB and logs, asserts facts, runs Prolog queries, and outputs detailed violation reports with configurable scoring weights.
-- **Compliance Scoring:** Sophisticated scoring system with customizable weights for different compliance aspects (criticality, violations, timeliness, and breadth).
-- **Scenario Coverage:** Built-in test cases for erasure, restriction, access requests, and more.
+- build a small knowledge base (KB)
+- generate KB-aware system logs (staff activities and patient requests)
+- assert facts into the Prolog engine and collect rule-instance violations
+- validate that generated violating events map to exactly one policy rule
 
-## Project Structure
-```
-auditor.py                    # Python audit engine
-main.py                      # Main entry point and configuration
-scorer.py                    # Compliance scoring logic
-data_loader.py              # Data loading utilities
-knowledge_base/
-  ├── kb_generation.py      # Knowledge base generation script
-  └── knowledge_base.csv    # Generated knowledge base facts
-system_log/
-  ├── patient_log_generation.py    # Patient request log generator
-  ├── staff_log_generation.py      # Staff activity log generator
-  ├── patient_request_log.csv      # Patient request events
-  └── staff_activity_log.csv       # Staff activity events
-policy/
-  └── policy.pl            # Prolog policy rules
-```
+This README is organized for quick onboarding and reproducible experiments.
 
-## Configuration
-The system can be configured through parameters in `main.py`:
-- **Scoring Weights:** Customize importance of different compliance aspects (Criticality, Violations, Timeliness, Breadth)
-- **Rule Criticalities:** Set severity levels for different policy rules
-- **Normalization Constants:** Adjust scoring normalization factors
-- **Audit Date:** Set the date for compliance evaluation
+## TL;DR — quick commands
 
-## How to Run
-1. Install Python 3.9+ and SWI-Prolog
-2. Install dependencies:
-   ```bash
-   pip install pandas numpy faker pyswip
-   ```
-3. Generate test data:
-   ```bash
-   python3 knowledge_base/kb_generation.py
-   python3 system_log/patient_log_generation.py
-   python3 system_log/staff_log_generation.py
-   ```
-4. Run the audit engine:
-   ```bash
-   python3 main.py
-   ```
-
-## Customization
-- Modify scoring parameters in `main.py` to adjust compliance evaluation
-- Edit log generation scripts to create different test scenarios
-- Update `policy/policy.pl` to modify compliance rules
-- Adjust knowledge base generation for different entity relationships
-
-## Output
-The system generates:
-- Detailed violation reports per policy rule
-# Automated Compliance Engine (ACE)
-
-ACE is a simulation and audit toolkit for testing GDPR and HIPAA compliance. It combines a Prolog policy engine with Python-based generators and auditors to produce reproducible system logs, assert facts from a knowledge base, and report policy violations and compliance scores.
-
-## Highlights
-- KB-aware log generators for staff activities and patient requests
-- Prolog policies for GDPR (Art.15/17/18) and HIPAA concepts (minimum necessary, patient access)
-- Python auditor that asserts KB and event facts into SWI-Prolog and collects rule-instance violations
-- Validation tools (analyzers) that confirm generator labels match auditor detections (single-rule-per-violation option)
-
-## Project structure (relevant files)
-
-```
-auditor.py                             # Python audit engine that talks to SWI-Prolog
-main.py                                # Entry point / high-level configuration
-scorer.py                              # Compliance scoring logic
-data_loader.py                         # KB and CSV loading helpers used by analyzers
-knowledge_base/
-  ├─ kb_generation.py                  # KB generation
-  └─ knowledge_base.csv                 # Knowledge base facts
-policy/
-  └─ policy.pl                          # Prolog policy rules
-tools/
-  ├─ generate_staff_logs.py             # KB-aware staff activity log generator
-  ├─ analyze_staff_rule_instances.py    # Analyzer that validates staff CSVs against auditor
-  ├─ generate_patient_requests.py       # KB-aware patient request log generator
-  └─ analyze_patient_rule_instances.py  # Analyzer that validates patient CSVs against auditor
-system_log/
-  ├─ staff_activity_<N>.csv             # Generated staff logs (e.g. staff_activity_10000.csv)
-  └─ patient_request_<N>.csv            # Generated patient request logs (e.g. patient_request_50000.csv)
-```
-
-Notes:
-- Generators produce a set of CSV files under `system_log/` with the naming convention shown above.
-- By default generators use an `AUDIT_DATE` constant (example in repo: `2025-08-31`) so results are reproducible.
-
-## Option B — single-rule-per-violation
-
-The recent generators implement an Option B constraint: when a row is labeled as a violation, the generator constructs the event so it triggers exactly one policy rule in the Prolog policy. Validation uses the analyzer scripts and the auditor; the expected invariant is:
-
-`labeled_violations == auditor_rule_instances` and no single row maps to >1 rule instance.
-
-The analyzers report a compact summary (total rows, labeled violations, auditor rule instances, unique violating rows, and distribution of distinct rules per violating row) and will flag multi-rule rows if they occur.
-
-## Quick start
-
-1) Install system requirements
-
-```bash
-# macOS / Linux
-python3 -m pip install --user pandas numpy faker pyswip
-# Install SWI-Prolog separately (e.g. Homebrew: `brew install swi-prolog`)
-```
-
-2) Generate the knowledge base
+Install dependencies and SWI-Prolog, then run:
 
 ```bash
 python3 knowledge_base/kb_generation.py
+python3 tools/generate_staff_logs.py
+python3 tools/generate_patient_requests.py
+PYTHONPATH=. python3 tools/analyze_staff_rule_instances.py system_log/staff_activity_10000.csv
 ```
 
-3) Generate system logs (example sizes: 100, 1000, 5000, 10000, 50000)
+See the `Quick start` section below for details.
+
+## Table of contents
+
+1. Quick start
+2. Project layout
+3. Generators & Analyzers
+4. Validation 
+5. Configuration
+6. How to run (examples)
+7. Troubleshooting
+8. Contributing
+
+## 1) Quick start
+
+Requirements
+- Python 3.9+
+- SWI-Prolog installed (used via `pyswip`)
+
+Install Python packages:
 
 ```bash
-# staff logs (produces system_log/staff_activity_100.csv etc.)
-python3 tools/generate_staff_logs.py
+python3 -m pip install --user pandas numpy faker pyswip
+# On macOS use: brew install swi-prolog
+```
 
-# patient request logs (produces system_log/patient_request_100.csv etc.)
+Generate KB and logs and validate a sample:
+
+```bash
+python3 knowledge_base/kb_generation.py
+python3 tools/generate_staff_logs.py
+python3 tools/generate_patient_requests.py
+PYTHONPATH=. python3 tools/analyze_staff_rule_instances.py system_log/staff_activity_10000.csv
+```
+
+Notes: large analyzer runs produce verbose per-row assertion logs; rely on the final compact summary for validation.
+
+## 2) Project layout
+
+```
+auditor.py                             # Audit engine that loads KB and runs Prolog queries
+main.py                                # High-level runner and configuration
+scorer.py                              # Compliance scoring logic
+data_loader.py                         # Helpers: load KB and CSVs
+knowledge_base/
+  ├─ kb_generation.py                  # Create KB facts (CSV)
+  └─ knowledge_base.csv                 # Generated KB
+policy/
+  └─ policy.pl                          # Prolog policy rules (GDPR/HIPAA predicates)
+tools/
+  ├─ generate_staff_logs.py             # KB-aware staff activity generator
+  ├─ analyze_staff_rule_instances.py    # Analyzer for staff logs (validation)
+  ├─ generate_patient_requests.py       # KB-aware patient request generator
+  └─ analyze_patient_rule_instances.py  # Analyzer for patient logs (validation)
+system_log/
+  ├─ staff_activity_<N>.csv             # Generated staff CSVs (100,1000,5000,10000,50000)
+  └─ patient_request_<N>.csv            # Generated patient request CSVs
+```
+
+## 3) Generators & Analyzers
+
+- generate_staff_logs.py: creates KB-aware staff activity CSVs with configurable sizes and a violation rate. Recent edits enforce each labeled violation is constructed so it triggers exactly one policy rule.
+- generate_patient_requests.py: creates patient-request CSVs (access, erasure, restriction) with similar guarantees.
+- analyze_staff_rule_instances.py / analyze_patient_rule_instances.py: load a CSV, assert per-row facts into Prolog via `auditor.py`, collect violations, and print a compact summary including any multi-rule rows.
+
+Use `PYTHONPATH=.` so the `auditor.py` module is importable by analyzer scripts.
+
+## 4) Validation
+
+Validation contract:
+- Inputs: `knowledge_base/knowledge_base.csv` and one generated `system_log/*.csv`
+- Analyzer output: counts for total rows, labeled_violations, auditor_rule_instances, unique_violating_rows, and distribution of distinct rules per row
+- Success criteria: `labeled_violations == auditor_rule_instances` and zero rows that map to >1 rule
+
+The analyzers include this check and will print a short report. For large files rely on the final summary (the scripts produce per-row Prolog assertion logs during the run which are verbose).
+
+## 5) Configuration
+
+Primary configuration is in `main.py` and within the generator scripts:
+
+- Scoring weights — adjust importance for Criticality, Violations, Timeliness, Breadth
+- Rule criticalities — severity levels per rule
+- Normalization constants — used by the scorer
+- AUDIT_DATE — the audit evaluation date (used by generators for reproducibility; example in repo: `2025-08-31`)
+
+Generator-specific parameters (edit in `tools/generate_*` scripts): sizes, violation rate, and deterministic seed.
+
+## 6) How to run (examples)
+
+Generate KB and a full set of logs (sizes: 100, 1000, 5000, 10000, 50000):
+
+```bash
+python3 knowledge_base/kb_generation.py
+python3 tools/generate_staff_logs.py
 python3 tools/generate_patient_requests.py
 ```
 
-4) Validate a generated CSV with the auditor/analyzer (recommended: use `PYTHONPATH=.` so the auditor imports correctly)
+Validate a specific CSV (recommended):
 
 ```bash
-# Analyze a staff file
-PYTHONPATH=. python3 tools/analyze_staff_rule_instances.py system_log/staff_activity_10000.csv
+# staff
+PYTHONPATH=. python3 tools/analyze_staff_rule_instances.py system_log/staff_activity_5000.csv
 
-# Analyze a patient request file
+# patient
 PYTHONPATH=. python3 tools/analyze_patient_rule_instances.py system_log/patient_request_50000.csv
 ```
 
-The analyzer prints per-row Prolog assertion logs during the run and then a compact final summary. For large files rely on the final summary for correctness checks.
+Run the audit engine (example):
 
-## Validation contract (quick)
+```bash
+python3 main.py
+```
 
-- Inputs: KB CSV (`knowledge_base/knowledge_base.csv`) and a generated system log CSV
-- Output: Analyzer summary showing counts of labeled vs detected violations and whether any single row triggered >1 rule
-- Success criteria: `labeled_violations == auditor_rule_instances` and zero multi-rule rows
+## 7) Troubleshooting
 
-## Extending / Customizing
+- Module import errors: run analyzers with `PYTHONPATH=.` to ensure local modules (e.g. `auditor.py`) are found.
+- SWI-Prolog: ensure it is installed and reachable; `pyswip` acts as the bridge. On macOS use Homebrew to install: `brew install swi-prolog`.
+- Verbose logs: analyzer scripts print every asserted Prolog fact; for large files skip the assertion output and review the analyzer's final summary.
 
-- Adjust `AUDIT_DATE` or generator parameters in the corresponding `tools/` script to vary scenarios
-- Edit `policy/policy.pl` to change rules; use the analyzers to re-run validation
-- If you want quieter analyzer output, consider adding a `--quiet` flag to the analyzer scripts (not yet implemented in core)
+## 8) Contributing
 
-## Troubleshooting
+- Prefer small, focused PRs. Changes to generators should be accompanied by analyzer runs showing the validation summary.
+- If you change `policy/policy.pl`, re-run the analyzers to confirm Option B still holds for existing test logs.
 
-- If an analyzer fails with `ModuleNotFoundError`, ensure you run it with `PYTHONPATH=.` so local modules (e.g. `auditor.py`) are importable.
-- The Prolog engine (SWI-Prolog) must be installed and reachable via `pyswip`/system paths.
-
-## Contributing
-
-- Make changes in the `tools/` folder for generators and analyzers.
-- Run the analyzers after generating logs to check Option B constraints are preserved.
+If you'd like, I can:
+- add a `--quiet` flag to the analyzer scripts to suppress per-row assertion logs,
+- add a small `run_validation.sh` helper to generate logs and run analyzers in one command.
