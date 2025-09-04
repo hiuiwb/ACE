@@ -101,3 +101,13 @@ log_17,bclerk_0,read_phi,phi_rec_2,0,0,1,marketing,2025-08-25T20:25:52,violation
 log_94,bclerk_1,read_phi,phi_rec_8,0,0,1,billing,2025-08-29T02:21:19,benign
 log_100,doc_3,read_phi,phi_rec_18,1,1,0,research,2025-08-29T02:21:19,violation_hipaa_auth
 log_101,bclerk_0,read_phi,phi_rec_18,1,0,1,billing,2025-08-29T02:21:19,violation_hipaa_min_necessary
+log_102,doc_0,read_phi,phi_rec_3,1,1,0,diagnosis,2025-08-30T12:00:00,violation_hipaa_auth
+log_103,doc_1,read_phi,phi_rec_2,1,1,0,diagnosis,2025-08-29T12:00:00,violation_hipaa_auth
+log_104,doc_4,read_phi,phi_rec_3,1,1,0,diagnosis,2025-08-28T12:00:00,violation_hipaa_auth
+log_105,doc_2,read_phi,phi_rec_10,1,1,0,diagnosis,2025-08-27T12:00:00,violation_hipaa_auth
+log_106,bclerk_0,read_phi,phi_rec_11,0,1,0,billing,2025-08-26T12:00:00,violation_hipaa_min_necessary
+log_107,bclerk_1,read_phi,phi_rec_3,1,0,0,billing,2025-08-25T12:00:00,violation_hipaa_min_necessary
+log_108,bclerk_0,read_phi,phi_rec_6,0,1,0,billing,2025-08-24T12:00:00,violation_hipaa_min_necessary
+log_109,doc_3,read_phi,phi_rec_0,1,1,0,research,2025-08-23T12:00:00,violation_gdpr_art18
+log_110,doc_0,read_phi,phi_rec_2,1,1,0,marketing,2025-08-22T12:00:00,violation_gdpr_art18
+log_111,doc_3,read_phi,phi_rec_5,1,1,0,marketing,2025-08-21T12:00:00,violation_gdpr_art18

@@ -1,0 +1,35 @@
+Prompt: Add N patient-request log entries that intentionally violate GDPR rules
+
+Description:
+Please add N new rows to the patient request log CSV file located at system_log/patient_request_log.csv. Each row must be crafted using facts available in knowledge_base/knowledge_base.csv and must trigger exactly one GDPR-related rule from policy/policy.pl (specifically: gdpr_art15_access or gdpr_art17_erasure). After adding entries, verify each new row triggers only the intended rule.
+
+Constraints and requirements:
+- N: replace <N> with the number of entries to add (e.g., 10).
+- For each entry include these CSV fields exactly:
+  log_id,principal,action,resource,lab_result,clinical_note,billing_info,request_timestamp,process_timestamp,label
+- Timestamp format: YYYY-MM-DDTHH:MM:SS (e.g., 2025-07-21T00:00:00). Use empty process_timestamp for unfulfilled requests.
+- Use principals and PHI records consistent with knowledge_base/knowledge_base.csv. Ensure `owns_phi_record` and `is_doctor_of` facts remain consistent if you rely on them.
+- Each added entry must violate exactly one rule in policy/policy.pl; if an initial entry triggers multiple rules, adjust the request date, process date, principal, or attributes until exactly one rule fires.
+- Label each row using the repository's convention: e.g., violation_gdpr_art15 or violation_gdpr_art17.
+- Prefer to split entries across the two GDPR rules (gdpr_art15_access and gdpr_art17_erasure) as desired.
+
+Verification steps (automatable):
+1. Load knowledge_base/knowledge_base.csv into the policy engine.
+2. Assert a deterministic current date into Prolog, e.g. current_date('2025-08-31').
+3. For each new row:
+   - If action == request_access: assert request_access(Patient, PHI_Record, RequestID, RequestDate).
+   - If action == request_deactivation: assert request_deactivation(Patient, RequestID, RequestDate).
+   - Query violation(RuleID, Principal, ObjectID).
+   - Confirm the query returns exactly one RuleID and that it matches the CSV label.
+4. Retract the temporary facts after verification.
+
+Edge cases and notes:
+- A gdpr_art15_access violation needs a request_date older than the audit/current date by >30 days and no request_fulfilled(RequestID) fact in KB.
+- A gdpr_art17_erasure violation needs a deactivation request older than 30 days and no deactivation_fulfilled(RequestID) fact in KB.
+- If you want the violation to be attributed to a doctor, ensure an is_doctor_of(Doctor, Patient) fact exists in the KB; the policy attributes violations to doctors using that relation.
+- If you prefer automated insertion, include the exact N and the split across rules in your request and I will append rows and run the verification automatically.
+
+Example brief request (fill placeholders):
+"Add 10 patient request entries. Create 6 entries violating gdpr_art15_access and 4 violating gdpr_art17_erasure. Use timestamps in May–July 2025, save into system_log/patient_request_log.csv, and return a table mapping log_id -> triggered_rule."
+
+End of prompt.
