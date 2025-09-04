@@ -6,8 +6,8 @@ from scorer import ComplianceScorer
 # --- 1. CONFIGURATION ---
 POLICY_FILE = "policy/policy.pl"
 KB_FILE = "knowledge_base/knowledge_base.csv"
-STAFF_LOG_FILE = "system_log/staff_activity_log.csv"
-PATIENT_LOG_FILE = "system_log/patient_request_log.csv"
+STAFF_LOG_FILE = "system_log/staff_activity_10000.csv"
+PATIENT_LOG_FILE = "system_log/patient_request_10000.csv"
 AUDIT_DATE = "2025-08-31"
 
 # Scoring model parameters
@@ -160,6 +160,14 @@ def main():
     else:
         num_violators = violations_df['Principal'].nunique()
         print(f"Total violations detected: {len(violations_df)}")
+        # Also report unique violating rows (group by principal+object+timestamp)
+        try:
+            violations_df['row_key'] = violations_df.apply(lambda r: f"{r['Principal']}|{r['ObjectID']}|{r['timestamp']}", axis=1)
+            num_unique_rows = violations_df['row_key'].nunique()
+            print(f"Total unique violating rows: {num_unique_rows}")
+        except Exception:
+            # If timestamp formatting or keys fail, skip the unique-row summary
+            pass
         print(f"Number of unique violators: {num_violators}")
         print("\nViolation Breakdown by Rule:")
         print(violations_df['RuleID'].value_counts().to_string())

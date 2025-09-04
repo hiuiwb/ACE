@@ -4,9 +4,9 @@ import random
 from datetime import datetime, timedelta
 
 # --- 1. CONFIGURATION ---
-NUM_DOCTORS = 5
-NUM_PATIENTS = 20
-NUM_BILLING_STAFF = 2
+NUM_DOCTORS = 50
+NUM_PATIENTS = 2000
+NUM_BILLING_STAFF = 15
 START_DATE = datetime(2025, 1, 1)
 
 # Define principals with more realistic IDs
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     kb_df = kb_df[['kb_id', 'category', 'fact_name', 'arg1', 'arg2', 'arg3', 'start_date', 'end_date']]
 
     # Save to CSV
-    kb_df.to_csv("knowledge_base.csv", index=False)
+    kb_df.to_csv("knowledge_base/knowledge_base.csv", index=False)
 
     print(f"\n--- Hospital Knowledge Base Generation Complete ---")
     print(f"Generated {len(kb_df)} facts across 2 categories and saved to 'knowledge_base.csv'.")

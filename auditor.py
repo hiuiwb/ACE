@@ -141,6 +141,16 @@ class Auditor:
                         }
                         all_violations.append(decoded_violation)
                 
+                # Retract any attribute-level facts we asserted for this entry
+                for af in attribute_facts:
+                    try:
+                        self.prolog.retractall(af)
+                    except Exception:
+                        try:
+                            self.prolog.retract(af)
+                        except Exception:
+                            pass
+
                 # Retract the temporary log entry fact to keep the state clean
                 # Use retractall to avoid quoting/arity fragility
                 try:
