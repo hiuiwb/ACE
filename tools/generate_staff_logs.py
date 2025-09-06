@@ -19,7 +19,7 @@ OUT_DIR.mkdir(exist_ok=True)
 
 KB_PATH = Path('knowledge_base/knowledge_base.csv')
 
-SIZES = [100, 1000, 5000, 10000, 50000]
+SIZES = [5000, 10000, 50000, 100000, 200000, 500000]
 VIOLATION_RATE = 0.05
 
 START_DATE = datetime(2025, 1, 1)

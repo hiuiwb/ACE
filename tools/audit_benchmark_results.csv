@@ -1,0 +1,13 @@
+dataset,#entries,%labeled violations,#labeled_violations,#auditor_detections,%detection_rate,total runtime (s),throughput (entries/s),peak memory (MB)
+staff_activity_10000.csv,10000,5.0,500,500,5.0,112.006,89.281,81.5
+staff_activity_100000.csv,100000,5.0,5000,5000,5.0,1299.936,76.927,179.92
+staff_activity_200000.csv,200000,5.0,10000,10000,5.0,2654.017,75.357,221.16
+staff_activity_5000.csv,5000,5.0,250,250,5.0,50.173,99.655,81.66
+staff_activity_50000.csv,50000,5.0,2500,2500,5.0,596.302,83.85,117.11
+staff_activity_500000.csv,500000,5.0,25000,25000,5.0,6363.378,78.575,413.72
+patient_request_10000.csv,10000,5.0,500,500,5.0,112.699,88.732,80.5
+patient_request_100000.csv,100000,5.0,5000,5000,5.0,1291.577,77.425,159.62
+patient_request_200000.csv,200000,5.0,10000,10000,5.0,2666.071,75.017,231.64
+patient_request_5000.csv,5000,5.0,250,250,5.0,57.076,87.603,78.33
+patient_request_50000.csv,50000,5.0,2500,2500,5.0,659.441,75.822,125.0
+patient_request_500000.csv,500000,5.0,25000,25000,5.0,6688.031,74.76,485.39

@@ -38,15 +38,6 @@ violation('hipaa_auth', Doctor, PHI_Record) :-
     owns_phi_record(Patient, PHI_Record),
     \+ is_doctor_of(Doctor, Patient).
 
-% --- Rule 2: Minimum Necessary Violation (HIPAA-style) ---
-% A violation occurs if a principal's role does not permit them to
-% access the specific type of data contained in the record.
-% violation('hipaa_min_necessary', Principal, PHI_Record) :-
-%    read_phi(Principal, PHI_Record, _Purpose, _EventID),
-%    has_role(Principal, Role),
-%    resource_type(PHI_Record, Type),
-%    \+ role_can_access_type(Role, Type).
-
 % Add dynamic declaration for attribute-level read facts
 :- dynamic(read_attribute/3).  % read_attribute(Principal, PHI_Record, AttributeAtom)
 
@@ -66,26 +57,6 @@ violation('gdpr_art18_restriction', Principal, PHI_Record) :-
     read_phi(Principal, PHI_Record, Purpose, _EventID),
     owns_phi_record(Patient, PHI_Record),
     \+ has_unrestricted_status(Patient, Purpose).
-
-% --- Rule 4: GDPR Art. 17 (Right to Erasure) ---
-% A violation occurs if a deactivation request from a patient is older
-% than 30 days and has not been marked as fulfilled.
-% violation('gdpr_art17_erasure', Patient, RequestID) :-
-%     request_deactivation(Patient, RequestID, RequestDate),
-%     current_date(Today),
-%     days_since(RequestDate, Today, Days),
-%     Days > 30,
-%     \+ deactivation_fulfilled(RequestID).
-
-% --- Rule 5: GDPR Art. 15 (Right of Access) ---
-% A violation occurs if a patient's valid access request is older than 30
-% days and has not been marked as 'fulfilled' in the Knowledge Base.
-% violation('gdpr_art15_access', Patient, RequestID) :-
-%     request_access(Patient, _PHI_Record, RequestID, RequestDate),
-%     current_date(Today),
-%     days_since(RequestDate, Today, Days),
-%     Days > 30,
-%     \+ request_fulfilled(RequestID).
 
 % --- Rule 4: GDPR Art. 17 (Right to Erasure) ---
 % A violation occurs if a deactivation request from a patient is older
