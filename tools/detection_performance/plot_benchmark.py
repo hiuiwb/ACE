@@ -163,7 +163,7 @@ def plot_detection_rate(df, outdir):
     plt.figure(figsize=(12,6))
     # seaborn palette expects a palette name or list; using matplotlib color and black edges
     ax = sns.barplot(x='dataset', y='%detection_rate', data=df, color='tab:orange', edgecolor='black')
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=0, ha='right')
     plt.ylabel('% detection rate')
     # plt.title('Detection rate per dataset')
     _style_axes(ax)

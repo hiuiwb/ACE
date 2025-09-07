@@ -4,9 +4,9 @@ import random
 from datetime import datetime, timedelta
 
 # --- 1. CONFIGURATION ---
-NUM_DOCTORS = 50
-NUM_PATIENTS = 2000
-NUM_BILLING_STAFF = 15
+NUM_DOCTORS = 5
+NUM_PATIENTS = 200
+NUM_BILLING_STAFF = 1
 START_DATE = datetime(2025, 1, 1)
 
 # Define principals with more realistic IDs

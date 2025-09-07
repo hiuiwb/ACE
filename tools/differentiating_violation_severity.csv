@@ -1,0 +1,5 @@
+scenario,ACE_score,Binary_score,Count_score,n_violations
+A_low_impact,0.5530864438151328,0.0,0.99,1
+B_high_volume,0.36418814831480717,0.0,0.5,50
+C_high_criticality,0.4780864438151329,0.0,0.98,2
+D_high_duration,0.42014151828702806,0.0,0.75,25
