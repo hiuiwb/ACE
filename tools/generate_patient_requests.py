@@ -19,7 +19,7 @@ import pandas as pd
 
 KB_FILE = "knowledge_base/knowledge_base.csv"
 OUT_DIR = "system_log"
-SIZES = [5000, 10000, 50000, 100000, 200000, 500000]
+SIZES = [5000]
 VIOLATION_RATE = 0.05
 AUDIT_DATE = datetime(2025, 8, 31)
 

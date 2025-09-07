@@ -6,8 +6,8 @@ from scorer import ComplianceScorer
 # --- 1. CONFIGURATION ---
 POLICY_FILE = "policy/policy.pl"
 KB_FILE = "knowledge_base/knowledge_base.csv"
-STAFF_LOG_FILE = "system_log/staff_activity_10000.csv"
-PATIENT_LOG_FILE = "system_log/patient_request_10000.csv"
+STAFF_LOG_FILE = "system_log/staff_activity_5000.csv"
+PATIENT_LOG_FILE = "system_log/patient_request_5000.csv"
 AUDIT_DATE = "2025-08-31"
 
 # Scoring model parameters
@@ -181,13 +181,26 @@ def main():
     else:
         for principal in principals_to_evaluate:
             print(f"\n--- Evaluating Principal: {principal} ---")
-            
-            final_score = scorer.calculate_final_score(all_detected_violations, principal_id=principal)
-            print(f"Final Compliance Score: {final_score:.4f}")
-            
+
+            # calculate_final_score may return either a float or (float, breakdown_df)
+            score_res = scorer.calculate_final_score(all_detected_violations, principal_id=principal)
+            if isinstance(score_res, tuple):
+                score, breakdown_df = score_res
+            else:
+                score = score_res
+                breakdown_df = None
+
+            print(f"Final Compliance Score: {float(score):.4f}")
+
+            # show a brief per-principal violation instance summary
             print("Violation Instances:")
             principal_violations = violations_df[violations_df['Principal'] == principal]
             print(principal_violations['RuleID'].value_counts().to_string())
+
+            # optionally print the top breakdown rows if available
+            if breakdown_df is not None and not breakdown_df.empty:
+                print('\nTop violation instance breakdown:')
+                print(breakdown_df.head().to_string(index=False))
 
 if __name__ == "__main__":
     main()
